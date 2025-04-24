@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+    <head>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ПДФокус</title>
+        <link rel="stylesheet" href="static 'static/styles.css'" />
+        <script src="static 'static/app.js'"></script>
+    </head>
+        
+    <body>
+        <div class="container mt-5">
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h4>Обработка PDF с Tesseract OCR</h4>
+                        </div>
+                        <div class="card-body">
+                            <form id="pdfUploadForm" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="upload-area p-5 text-center border rounded" id="uploadArea">
+                                    <h5>Перетащите PDF-файл сюда</h5>
+                                    <p class="text-muted">или</p>
+                                    <input type="file" id="pdfFileInput" accept=".pdf" class="d-none">
+                                    <button type="button" class="btn btn-primary" id="selectFileBtn">Выберите файл</button>
+                                </div>
+                                <div class="text-center mt-3" id="processingIndicator" style="display: none;">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Обработка...</span>
+                                    </div>
+                                    <p class="mt-2">Идет обработка PDF, пожалуйста подождите...</p>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('pdfFileInput');
+                const selectFileBtn = document.getElementById('selectFileBtn');
+                const processingIndicator = document.getElementById('processingIndicator');
+                const form = document.getElementById('pdfUploadForm');
+                
+                // Обработка выбора файла
+                selectFileBtn.addEventListener('click', () => fileInput.click());
+                
+                fileInput.addEventListener('change', function(e) {
+                    if (e.target.files.length) {
+                        uploadFile(e.target.files[0]);
+                    }
+                });
+                
+                // Обработка перетаскивания
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('bg-light');
+                });
+                
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('bg-light');
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('bg-light');
+                    
+                    if (e.dataTransfer.files.length && e.dataTransfer.files[0].type === 'application/pdf') {
+                        uploadFile(e.dataTransfer.files[0]);
+                    }
+                });
+                
+                function uploadFile(file) {
+                    const formData = new FormData();
+                    formData.append('pdf_file', file);
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                    
+                    // Показываем индикатор загрузки
+                    uploadArea.style.display = 'none';
+                    processingIndicator.style.display = 'block';
+                    
+                    // Отправляем файл на сервер
+                    fetch('{% url "upload_pdf" %}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.result_url) {
+                            window.location.href = data.result_url;
+                        } else {
+                            alert('Ошибка обработки файла');
+                            uploadArea.style.display = 'block';
+                            processingIndicator.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка: ' + error.message);
+                        uploadArea.style.display = 'block';
+                        processingIndicator.style.display = 'none';
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

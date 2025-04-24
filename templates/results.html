@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+    <head>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ПДФокус</title>
+        <link rel="stylesheet" href="static 'static/styles.css'" />
+        <script src="static 'static/app.js'"></script>
+    </head>
+        
+    <body>
+        <div class="container mt-5">
+            <div class="row">
+                <div class="col-md-10 offset-md-1">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h4>Результаты обработки PDF</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5>Информация о документе:</h5>
+                                    <ul class="list-group">
+                                        <li class="list-group-item">Файл: {{ document.original_file.name }}</li>
+                                        <li class="list-group-item">Статус: {{ document.get_status_display }}</li>
+                                        <li class="list-group-item">Время обработки: {{ document.processing_time|floatformat:2 }} сек</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <a href="{{ document.original_file.url }}" class="btn btn-primary" download>
+                                        Скачать оригинал
+                                    </a>
+                                    <a href="{% url 'download_results' document.id %}" class="btn btn-success">
+                                        Скачать результаты
+                                    </a>
+                                    <a href="{% url 'upload_pdf' %}" class="btn btn-outline-secondary">
+                                        Новый документ
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="results-container bg-light p-3 rounded">
+                                <h5 class="mb-3">Извлеченный контент:</h5>
+                                <pre>{{ result_content }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
