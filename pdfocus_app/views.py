@@ -1,10 +1,10 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from .models import PDFDocument
-from .forms import PDFUploadForm
+from pdfocus_app.models import PDFDocument
+from pdfocus_app.forms import PDFUploadForm
 from django.conf import settings
 import os
-from .pdf_processor import process_pdf
+from pdfocus_app.utils import process_pdf
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponseBadRequest
 
