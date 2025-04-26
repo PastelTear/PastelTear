@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ПДФокус</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'styles.css' %}">
+    </head>
+        
+    <body>
+        {% if form.errors %}
+        <div class="alert alert-danger alert-dismissible fixed-top m-3">
+            Неверные учетные данные!
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        <div id="pdf-metadata-form" style="display: none;">
+            <input type="hidden" name="document_type" id="document-type-input">
+            <input type="hidden" name="theme" id="theme-input">
+            <select multiple name="authors" id="authors-select" style="display: none;"></select>
+        </div>
+
+        <!-- Боковое меню -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-file-pdf me-2"></i>ПДФокус</h3>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active" onclick="navigate('main')"><i class="fas fa-home"></i><span>Главная</span></a></li>
+                <li><a href="#" onclick="navigate('catalog')"><i class="fas fa-book"></i><span>Каталог PDF</span></a></li>
+                <li><a href="#" onclick="navigate('account')"><i class="fas fa-user"></i><span>Личный кабинет</span></a></li>
+            </ul>
+        </div>
+
+        <!-- Шапка -->
+        <header>
+            <div class="header-container">
+                <div class="logo" onclick="navigate('main')">ПДФокус</div>
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" id="search-input" placeholder="Поиск PDF-файлов..." onkeyup="if(event.key === 'Enter') searchPDFs()">
+                        <button onclick="searchPDFs()"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <div>
+                    <button class="account-btn" id="account-btn" onclick="navigate('account')">
+                        <i class="fas fa-user me-2"></i>Личный кабинет
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Основное содержимое -->
+        <div class="main-container">
+            <!-- Страница авторизации -->
+            {% if not user.is_authenticated %}
+            <div id="login-page" style="display: block;">
+                <div class="auth-form">
+                    <h2>Вход в систему</h2>
+                    <form method="post" action="{% url 'login' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <input type="text" name="username" class="form-control" placeholder="Имя пользователя" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="password" name="password" class="form-control" placeholder="Пароль" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Войти</button>
+                        <input type="hidden" name="next" value="{{ next }}">
+                    </form>
+                    <div class="auth-switch mt-3">
+                        Нет аккаунта? <a href="javascript:void(0)" onclick="showRegisterForm()">Зарегистрироваться</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Страница регистрации -->
+            <div id="register-page" style="display: none;">
+                <div class="auth-form">
+                    <h2>Регистрация</h2>
+                    <form method="post" action="{% url 'register' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <input type="text" name="username" class="form-control" placeholder="Имя пользователя" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="password" name="password1" class="form-control" placeholder="Пароль" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="password" name="password2" class="form-control" placeholder="Повторите пароль" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Зарегистрироваться</button>
+                    </form>
+                    <div class="auth-switch mt-3">
+                        Уже есть аккаунт? <a href="javascript:void(0)" onclick="showLoginForm()">Войти</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+                <!-- Главная страница -->
+            <div id="main-page">
+                <div class="pdf-viewer-container">
+                    <div class="upload-area" id="upload-area">
+                        <h3>Перетащите PDF-файлы сюда</h3>
+                        <p>или</p>
+                        <input type="file" id="pdf-upload" accept=".pdf" multiple style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('pdf-upload').click()">
+                            <i class="fas fa-upload me-2"></i>Выберите файлы
+                        </button>
+                    </div>
+                    <div id="pdf-viewer">
+                        <div class="pdf-placeholder" id="pdf-placeholder">
+                            <i class="fas fa-file-pdf fa-4x"></i>
+                            <h3>Загрузите PDF-файл</h3>
+                            <p>Перетащите файл в эту область или нажмите кнопку "Выберите файлы"</p>
+                        </div>
+                    </div>
+                    <div class="pdf-controls" id="pdf-controls" style="display: none;">
+                        <div class="pdf-nav-buttons">
+                            <button class="btn btn-primary" id="prev-page">
+                                <i class="fas fa-arrow-left me-2"></i>Предыдущая
+                            </button>
+                            <span id="page-num" class="mx-3 align-self-center">Страница 1 из 1</span>
+                            <button class="btn btn-primary" id="next-page">
+                                Следующая<i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                        <div>
+                            <button class="btn btn-danger" id="close-pdf">
+                                <i class="fas fa-times me-2"></i>Закрыть PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="notes-container" id="notes-container">
+                    <div class="notes-header d-flex justify-content-between align-items-center mb-3">
+                        <h3>Мои заметки</h3>
+                        <button class="btn btn-success" id="add-note-btn" onclick="showNoteForm()">
+                            <i class="fas fa-plus me-2"></i>Добавить
+                        </button>
+                    </div>
+                    <div id="notes-list"></div>
+
+                    <div class="note-form" id="note-form" style="display: none;">
+                        <textarea id="note-text" class="form-control mb-2" placeholder="Введите текст заметки..." rows="3"></textarea>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button class="btn btn-secondary" id="cancel-note" onclick="hideNoteForm()">Отмена</button>
+                            <button class="btn btn-primary" id="save-note" onclick="saveNote()">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Каталог PDF -->
+            <div id="catalog-page" style="display: none;">
+                <h2>Каталог PDF-файлов</h2>
+                <div class="catalog-container" id="pdf-catalog">
+                    <!-- PDF-файлы будут загружаться здесь -->
+                </div>
+            </div>
+
+            <!-- Личный кабинет -->
+            <div id="account-page" style="display: none;">
+                <h2>Личный кабинет</h2>
+                <div class="account-container">
+                    <div class="user-profile">
+                        <div class="user-avatar" id="user-avatar">
+                            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                        </div>
+                        <h3 id="username">{{ user.get_full_name }}</h3>
+                        <p>Пользователь с <span id="join-date">{{ user.date_joined|date:"d.m.Y" }}</span></p>
+                        <div class="user-stats">
+                            <div class="stat-item">
+                                <span>Файлов:</span>
+                                <span id="user-files-count">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Заметок:</span>
+                                <span id="user-notes-count">0</span>
+                            </div>
+                        </div>
+                        <button onclick="logout()" class="btn btn-danger w-100 mt-3">
+                            <i class="fas fa-sign-out-alt me-2"></i>Выйти
+                        </button>
+                    </div>
+                </div>
+                <h3>Мои PDF-файлы</h3>
+                <div class="catalog-container" id="user-pdf-files">
+                    <!-- PDF-файлы пользователя будут загружаться здесь -->
+                </div>
+
+                <h3 class="mt-4">Мои заметки</h3>
+                <div class="notes-list" id="user-notes-list">
+                    <!-- Заметки пользователя будут загружаться здесь -->
+                </div>
+            </div>
+            </div>
+        </div>
+        </div>
+        {% endif %}
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+        <script src="{% static 'app.js' %}"></script>
+    </body>
+</html>

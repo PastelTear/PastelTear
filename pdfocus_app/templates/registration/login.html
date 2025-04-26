@@ -1,0 +1,41 @@
+{% extends "pdfocus_app/project.html" %}
+{% load static %}
+
+{% block content %}
+<div class="auth-form">
+    <h2>Вход в систему</h2>
+
+    {% if form.errors %}
+    <div class="alert alert-danger">
+        Неверное имя пользователя или пароль
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <input type="text" name="username" class="form-control" placeholder="Имя пользователя" required>
+        </div>
+        <div class="mb-3">
+            <input type="password" name="password" class="form-control" placeholder="Пароль" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Войти</button>
+        <input type="hidden" name="next" value="{{ next }}">
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Скрыть основной контент
+    const pages = ['main-page', 'catalog-page', 'account-page'];
+    pages.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Показать форму входа
+    const loginPage = document.getElementById('login-page');
+    if (loginPage) loginPage.style.display = 'block';
+});
+</script>
+{% endblock %}
